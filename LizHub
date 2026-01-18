@@ -1,11 +1,11 @@
 local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
 
--- สร้างหน้าต่าง (Liz Hub v1.4)
+-- สร้างหน้าต่าง (Liz Hub v1.6)
 local Window = Fluent:CreateWindow({
-    Title = "Liz Hub v1.4",
-    SubTitle = "Auto Farm (Kill All)",
+    Title = "Liz Hub v1.6",
+    SubTitle = "Skill Only (No Auto Kill)",
     TabWidth = 160,
-    Size = UDim2.fromOffset(580, 420),
+    Size = UDim2.fromOffset(580, 400),
     Acrylic = true,
     Theme = "Dark",
     MinimizeKey = Enum.KeyCode.RightControl
@@ -28,12 +28,7 @@ local Config = {
     AutoDungeon = false,
     SelectedDungeonRank = "B",
     
-    -- Farm
-    AutoFarm = false, -- (Auto Kill Mob)
-    AuraKill = false,
-    HoverHeight = 10,
-    
-    -- Main
+    -- Main (Skill)
     AutoSkill = false,
     SkillDelay = 0.5,
     
@@ -67,84 +62,20 @@ local TeleportData = {
 -- Tabs
 local Tabs = {
     Main = Window:AddTab({ Title = "Main", Icon = "home" }),
-    Farm = Window:AddTab({ Title = "Farm", Icon = "sword" }), -- แท็บใหม่
     Dungeon = Window:AddTab({ Title = "Dungeon", Icon = "castle" }),
     Teleport = Window:AddTab({ Title = "Teleport", Icon = "map" }),
     Misc = Window:AddTab({ Title = "Misc", Icon = "component" })
 }
 
--- Functions
-function ToggleAntiGravity(state)
-    local char = LocalPlayer.Character
-    if not char or not char:FindFirstChild("HumanoidRootPart") then return end
-    if state then
-        if not char.HumanoidRootPart:FindFirstChild("JemAntiGravity") then
-            local bv = Instance.new("BodyVelocity")
-            bv.Name = "JemAntiGravity"
-            bv.Velocity = Vector3.new(0,0,0)
-            bv.MaxForce = Vector3.new(1e5,1e5,1e5)
-            bv.Parent = char.HumanoidRootPart
-        end
-    else
-        local bv = char.HumanoidRootPart:FindFirstChild("JemAntiGravity")
-        if bv then bv:Destroy() end
-    end
-end
-
 -- =========================================================
 -- SYSTEM: LOOPS
 -- =========================================================
 
--- Loop 1: Auto Farm (Kill Mobs)
-task.spawn(function()
-    while true do
-        if Config.AutoFarm then
-            local char = LocalPlayer.Character
-            if char and char:FindFirstChild("HumanoidRootPart") then
-                ToggleAntiGravity(true)
-                
-                -- หา Mob ใน workspace.Live
-                local liveFolder = Workspace:FindFirstChild("Live")
-                local targetMob = nil
-                
-                if liveFolder then
-                    for _, mob in pairs(liveFolder:GetChildren()) do
-                        if mob:FindFirstChild("Humanoid") and mob.Humanoid.Health > 0 and mob:FindFirstChild("HumanoidRootPart") then
-                            targetMob = mob
-                            break -- เจอตัวแรกเอาเลย
-                        end
-                    end
-                end
-                
-                -- ถ้าเจอ -> วาร์ปไปเหนือหัว
-                if targetMob then
-                    local tPos = targetMob.HumanoidRootPart.Position
-                    char.HumanoidRootPart.CFrame = CFrame.new(tPos + Vector3.new(0, Config.HoverHeight, 0), tPos)
-                end
-            end
-        else
-            ToggleAntiGravity(false)
-        end
-        task.wait()
-    end
-end)
-
--- Loop 2: Aura Kill (ตีออโต้)
-task.spawn(function()
-    while true do
-        if Config.AuraKill then
-            ReplicatedStorage.RemoteEvents.BladeCombatRemote:FireServer()
-        end
-        task.wait(0.2)
-    end
-end)
-
--- Loop 3: Auto Dungeon
+-- Loop 1: Auto Dungeon
 task.spawn(function()
     while true do
         if Config.AutoDungeon then
             if not Workspace:FindFirstChild("Floors") then
-                -- [LOBBY]
                 local selected = DungeonData[Config.SelectedDungeonRank]
                 if selected and LocalPlayer.ReiNew[selected.Var].Value > 0 then
                     DungeonRemotePath:FireServer("Use Dungeon Ticket", { selected.Name, selected.Var })
@@ -153,7 +84,6 @@ task.spawn(function()
                     task.wait(5)
                 end
             else
-                -- [IN DUNGEON]
                 if Workspace.Floors:FindFirstChild("0") and Workspace.Floors["0"]:FindFirstChild("NextGate") then
                     Remote:FireServer("Towers:OpenGate")
                     task.wait(1)
@@ -164,7 +94,7 @@ task.spawn(function()
     end
 end)
 
--- Loop 4: Auto Skill
+-- Loop 2: Auto Skill
 task.spawn(function()
     while true do
         if Config.AutoSkill then
@@ -178,7 +108,7 @@ task.spawn(function()
     end
 end)
 
--- Loop 5: Misc
+-- Loop 3: Misc
 task.spawn(function()
     while true do
         if Config.ReduceLag then
@@ -200,9 +130,11 @@ end)
 -- UI SETTINGS
 -- =========================================================
 
--- [[ Main Tab ]]
+-- [[ MAIN TAB ]] (Skills Only)
+local SectionSkill = Tabs.Main:AddSection("Skills")
+
 Tabs.Main:AddToggle("AutoSkillToggle", {
-    Title = "Auto Skill (Madara)",
+    Title = "Auto Skill",
     Default = false,
     Callback = function(Value) Config.AutoSkill = Value end
 })
@@ -216,31 +148,7 @@ Tabs.Main:AddSlider("DelaySlider", {
     Callback = function(Value) Config.SkillDelay = Value end
 })
 
--- [[ Farm Tab ]]
-Tabs.Farm:AddToggle("AutoFarmToggle", {
-    Title = "Auto Kill Mob (Teleport)",
-    Description = "Warps to mobs in workspace.Live",
-    Default = false,
-    Callback = function(Value) Config.AutoFarm = Value end
-})
-
-Tabs.Farm:AddToggle("AuraKillToggle", {
-    Title = "Aura Kill",
-    Description = "Auto Attack",
-    Default = false,
-    Callback = function(Value) Config.AuraKill = Value end
-})
-
-Tabs.Farm:AddSlider("HeightSlider", {
-    Title = "Hover Height",
-    Default = 10,
-    Min = 0,
-    Max = 20,
-    Rounding = 1,
-    Callback = function(Value) Config.HoverHeight = Value end
-})
-
--- [[ Dungeon Tab ]]
+-- [[ DUNGEON TAB ]]
 Tabs.Dungeon:AddDropdown("RankSelect", {
     Title = "Select Dungeon Rank",
     Values = {"B", "A", "S", "SS"},
@@ -254,7 +162,7 @@ Tabs.Dungeon:AddToggle("AutoDungeonToggle", {
     Callback = function(Value) Config.AutoDungeon = Value end
 })
 
--- [[ Teleport Tab ]]
+-- [[ TELEPORT TAB ]]
 Tabs.Teleport:AddDropdown("TPSelect", {
     Title = "Select Destination",
     Values = {"Broly", "Tanjiro", "Prestige NPC", "Sukuna", "Zoro", "Cell", "Shop"},
@@ -276,7 +184,7 @@ Tabs.Teleport:AddButton({
     end
 })
 
--- [[ Misc Tab ]]
+-- [[ MISC TAB ]]
 Tabs.Misc:AddToggle("AntiAFKToggle", {
     Title = "Anti AFK",
     Default = false,
@@ -295,7 +203,7 @@ Tabs.Misc:AddToggle("ReduceLagToggle", { Title = "Reduce Lag", Default = false, 
 -- Init
 Window:SelectTab(1)
 Fluent:Notify({
-    Title = "Liz Hub v1.4",
-    Content = "Auto Farm Added!",
+    Title = "Liz Hub v1.6",
+    Content = "Cleaned Up (Skill Only)!",
     Duration = 3
 })
