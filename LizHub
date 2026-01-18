@@ -1,0 +1,81 @@
+local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
+
+-- สร้างหน้าต่าง (Liz Hub v1)
+local Window = Fluent:CreateWindow({
+    Title = "Liz Hub v1",
+    SubTitle = "",
+    TabWidth = 160,
+    Size = UDim2.fromOffset(480, 320),
+    Acrylic = true,
+    Theme = "Dark",
+    MinimizeKey = Enum.KeyCode.RightControl
+})
+
+-- ตัวแปรเก็บค่า (Config)
+local Config = {
+    AutoSkill = false,
+    SkillDelay = 0.5
+}
+
+-- สร้าง Tab
+local Tabs = {
+    Main = Window:AddTab({ Title = "Main", Icon = "home" })
+}
+
+-- =========================================================
+-- SYSTEM: AUTO SKILL LOOP
+-- =========================================================
+task.spawn(function()
+    while true do
+        if Config.AutoSkill then
+            local args = {
+                "MadaraFifth"
+            }
+            local remote = game:GetService("ReplicatedStorage"):FindFirstChild("Remotes")
+            
+            if remote and remote:FindFirstChild("AbilityHandler") then
+                remote.AbilityHandler:FireServer(unpack(args))
+            end
+        end
+        
+        -- Delay System
+        if Config.SkillDelay > 0 then
+            task.wait(Config.SkillDelay)
+        else
+            task.wait()
+        end
+    end
+end)
+
+-- =========================================================
+-- UI SETTINGS
+-- =========================================================
+
+-- 1. ปุ่มเปิด/ปิด (ชื่อ Auto Skill เฉยๆ)
+Tabs.Main:AddToggle("AutoSkillToggle", {
+    Title = "Auto Skill",
+    Default = false,
+    Callback = function(Value)
+        Config.AutoSkill = Value
+    end
+})
+
+-- 2. ตัวปรับความเร็ว
+Tabs.Main:AddSlider("DelaySlider", {
+    Title = "Delay",
+    Default = 0.5,
+    Min = 0,
+    Max = 2,
+    Rounding = 2,
+    Callback = function(Value)
+        Config.SkillDelay = Value
+    end
+})
+
+-- จบการทำงาน
+Window:SelectTab(1)
+Fluent:Notify({
+    Title = "Liz Hub v1",
+    Content = "Loaded Successfully!",
+    Duration = 3
+})
