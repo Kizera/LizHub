@@ -1,11 +1,11 @@
 local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
 
--- สร้างหน้าต่าง (Liz Hub v1.1)
+-- สร้างหน้าต่าง (Liz Hub v1.2)
 local Window = Fluent:CreateWindow({
-    Title = "Liz Hub v1.1",
-    SubTitle = "Auto Skill + Misc",
+    Title = "Liz Hub v1.2",
+    SubTitle = "Skill + TP + Misc",
     TabWidth = 160,
-    Size = UDim2.fromOffset(500, 350),
+    Size = UDim2.fromOffset(550, 380), -- ขยายหน้านิดนึง
     Acrylic = true,
     Theme = "Dark",
     MinimizeKey = Enum.KeyCode.RightControl
@@ -22,14 +22,27 @@ local LocalPlayer = Players.LocalPlayer
 local Config = {
     AutoSkill = false,
     SkillDelay = 0.5,
+    SelectedTP = "Broly", -- ค่าเริ่มต้น Teleport
     AntiAFK = false,
     OffVFX = false,
     ReduceLag = false
 }
 
+-- ข้อมูล Teleport (พิกัด + ชื่อโมเดล)
+local TeleportData = {
+    ["Broly"] = { TargetName = "Legendary Saiyan6", Coords = CFrame.new(1402, -3, 143) },
+    ["Tanjiro"] = { TargetName = "Tanjiro", Coords = CFrame.new(1510, 17, -104) },
+    ["Prestige NPC"] = { TargetName = "PrestigeNPC", Coords = CFrame.new(611, 222, 833) },
+    ["Sukuna"] = { TargetName = "Sukuna", Coords = CFrame.new(870, 122, 526) },
+    ["Zoro"] = { TargetName = "Zoro (PTS)", Coords = CFrame.new(557, 5, -182) },
+    ["Cell"] = { TargetName = "Cell", Coords = CFrame.new(1094, 21, -912) },
+    ["Shop"] = { TargetName = "Shop", Coords = CFrame.new(-829, 9, -1087) }
+}
+
 -- Tabs
 local Tabs = {
     Main = Window:AddTab({ Title = "Main", Icon = "home" }),
+    Teleport = Window:AddTab({ Title = "Teleport", Icon = "map" }), -- เพิ่มแท็บนี้
     Misc = Window:AddTab({ Title = "Misc", Icon = "component" })
 }
 
@@ -55,7 +68,7 @@ end)
 -- Loop 2: Misc Systems (Lag/VFX)
 task.spawn(function()
     while true do
-        -- Reduce Lag (Hide Damage Numbers)
+        -- Reduce Lag
         if Config.ReduceLag then
             pcall(function()
                 for _, gui in pairs(LocalPlayer.PlayerGui:GetChildren()) do
@@ -65,33 +78,26 @@ task.spawn(function()
                 end
             end)
         else
-            -- Restore (Optional: ถ้าปิดก็ให้มันกลับมา)
             pcall(function()
                 for _, gui in pairs(LocalPlayer.PlayerGui:GetChildren()) do
-                    if gui.Name:lower():match("damage") then
-                        gui.Enabled = true
-                    end
+                    if gui.Name:lower():match("damage") then gui.Enabled = true end
                 end
             end)
         end
 
-        -- Off VFX (Clear Effects)
+        -- Off VFX
         if Config.OffVFX then
             pcall(function()
                 if LocalPlayer.Backpack:FindFirstChild("Scripts") then
                     LocalPlayer.Backpack.Scripts.NewModules:Destroy()
                 end
             end)
-            
             for _, o in pairs(Workspace:GetChildren()) do
                 if o.Name:match("HitPart") or o.Name:match("Splash") then o:Destroy() end
             end
-            
             local effects = {"Particles", "NewEffects", "KevSFX", "VFX", "ReiNew"}
             for _, name in pairs(effects) do
-                if ReplicatedStorage:FindFirstChild(name) then
-                    ReplicatedStorage[name]:Destroy()
-                end
+                if ReplicatedStorage:FindFirstChild(name) then ReplicatedStorage[name]:Destroy() end
             end
         end
         task.wait(1)
@@ -116,6 +122,37 @@ Tabs.Main:AddSlider("DelaySlider", {
     Max = 2,
     Rounding = 2,
     Callback = function(Value) Config.SkillDelay = Value end
+})
+
+-- [[ Teleport Tab ]]
+Tabs.Teleport:AddDropdown("TPSelect", {
+    Title = "Select Destination",
+    Values = {"Broly", "Tanjiro", "Prestige NPC", "Sukuna", "Zoro", "Cell", "Shop"},
+    Default = 1,
+    Callback = function(Value)
+        Config.SelectedTP = Value
+    end
+})
+
+Tabs.Teleport:AddButton({
+    Title = "Teleport Now",
+    Callback = function()
+        local data = TeleportData[Config.SelectedTP]
+        -- ลองหาจากชื่อก่อน (เผื่อ NPC ขยับ) ถ้าไม่เจอใช้วาร์ปไปพิกัด
+        local target = Workspace:FindFirstChild("ChatParts") and Workspace.ChatParts:FindFirstChild(data.TargetName) 
+                    or Workspace:FindFirstChild("Live") and Workspace.Live:FindFirstChild(data.TargetName)
+        
+        if target then
+            if target:IsA("Model") then
+                LocalPlayer.Character.HumanoidRootPart.CFrame = target.HumanoidRootPart.CFrame
+            else
+                LocalPlayer.Character.HumanoidRootPart.CFrame = target.CFrame
+            end
+        else
+            -- ถ้าหาตัวไม่เจอ ให้วาร์ปไปพิกัดตายตัว
+            LocalPlayer.Character.HumanoidRootPart.CFrame = data.Coords
+        end
+    end
 })
 
 -- [[ Misc Tab ]]
@@ -150,7 +187,7 @@ Tabs.Misc:AddToggle("ReduceLagToggle", {
 -- Init
 Window:SelectTab(1)
 Fluent:Notify({
-    Title = "Liz Hub v1.1",
-    Content = "Misc Menu Added!",
+    Title = "Liz Hub v1.2",
+    Content = "Teleport System Added!",
     Duration = 3
 })
