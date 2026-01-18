@@ -3,7 +3,6 @@ local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/
 -- สร้างหน้าต่าง (Liz Hub v1.6)
 local Window = Fluent:CreateWindow({
     Title = "Liz Hub v1.6",
-    SubTitle = "Skill Only (No Auto Kill)",
     TabWidth = 160,
     Size = UDim2.fromOffset(580, 400),
     Acrylic = true,
