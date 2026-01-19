@@ -1,9 +1,9 @@
 local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
 
--- สร้างหน้าต่าง (Liz Hub v1.7)
+-- สร้างหน้าต่าง (Liz Hub v1.8)
 local Window = Fluent:CreateWindow({
-    Title = "Liz Hub v1.7",
-    SubTitle = "Auto Roll Uchiha",
+    Title = "Liz Hub v1.8",
+    SubTitle = "Adjustable Roll Speed",
     TabWidth = 160,
     Size = UDim2.fromOffset(580, 420),
     Acrylic = true,
@@ -21,12 +21,13 @@ local LocalPlayer = Players.LocalPlayer
 -- Remotes
 local Remote = ReplicatedStorage:WaitForChild("Modules"):WaitForChild("Signal"):WaitForChild("RemoteEvent")
 local DungeonRemotePath = ReplicatedStorage:WaitForChild("NEW37"):WaitForChild("DUNGEONS"):WaitForChild("DungeonEvent")
-local ItemRemoteEvents = ReplicatedStorage:WaitForChild("RemoteEvents") -- สำหรับ Buy/Clear
+local ItemRemoteEvents = ReplicatedStorage:WaitForChild("RemoteEvents")
 
 -- Config
 local Config = {
     -- Item
     AutoRoll = false,
+    RollSpeed = 0.1, -- ความเร็วเริ่มต้น
     
     -- Dungeon
     AutoDungeon = false,
@@ -66,7 +67,7 @@ local TeleportData = {
 -- Tabs
 local Tabs = {
     Main = Window:AddTab({ Title = "Main", Icon = "home" }),
-    Items = Window:AddTab({ Title = "Items", Icon = "gift" }), -- แท็บใหม่สำหรับสุ่มของ
+    Items = Window:AddTab({ Title = "Items", Icon = "gift" }),
     Dungeon = Window:AddTab({ Title = "Dungeon", Icon = "castle" }),
     Teleport = Window:AddTab({ Title = "Teleport", Icon = "map" }),
     Misc = Window:AddTab({ Title = "Misc", Icon = "component" })
@@ -82,32 +83,37 @@ task.spawn(function()
         if Config.AutoRoll then
             local backpack = LocalPlayer:FindFirstChild("Backpack")
             if backpack then
-                -- 1. เช็คว่าเจอของดีหรือยัง?
+                -- 1. เช็คของ
                 local targetItem = backpack:FindFirstChild("Uchiha Eyeball")
                 
                 if targetItem then
-                    -- เจอแล้ว! หยุดทุกอย่าง
+                    -- เจอแล้ว! หยุด
                     Config.AutoRoll = false
                     Fluent:Notify({
                         Title = "CONGRATULATIONS!",
-                        Content = "Uchiha Eyeball Found! Stopping...",
+                        Content = "Uchiha Eyeball Found!",
                         Duration = 10
                     })
                 else
-                    -- ยังไม่เจอ: เช็คจำนวนของในกระเป๋า
+                    -- นับจำนวนของ
                     local itemCount = 0
                     for _, v in pairs(backpack:GetChildren()) do
                         if v:IsA("Tool") then itemCount = itemCount + 1 end
                     end
                     
                     if itemCount >= 10 then
-                        -- 2. ของเต็ม (10 ชิ้น) -> เคลียร์กระเป๋า
+                        -- 2. ของเต็ม -> เคลียร์
                         ItemRemoteEvents.ClearInventoryRemote:FireServer()
-                        task.wait(0.8) -- รอระบบลบของ
+                        task.wait(0.8) -- รอเคลียร์ของ (อย่าปรับเร็วกว่านี้ เดี๋ยวบัค)
                     else
-                        -- 3. ของยังไม่เต็ม -> ซื้อต่อ
+                        -- 3. ซื้อ (ตามความเร็วที่ตั้ง)
                         ItemRemoteEvents.BuyItemRemote:FireServer("Random Specialization")
-                        task.wait(0.2) -- ความเร็วการซื้อ
+                        
+                        if Config.RollSpeed > 0 then
+                            task.wait(Config.RollSpeed)
+                        else
+                            task.wait() -- เร็วสุดเท่าที่เป็นไปได้
+                        end
                     end
                 end
             end
@@ -193,12 +199,22 @@ Tabs.Main:AddSlider("DelaySlider", {
     Callback = function(Value) Config.SkillDelay = Value end
 })
 
--- [[ ITEMS TAB ]] (New!)
+-- [[ ITEMS TAB ]]
 Tabs.Items:AddToggle("AutoRollToggle", {
     Title = "Auto Roll: Uchiha Eyeball",
-    Description = "Buys until found. Clears full bag.",
+    Description = "Buys & Clears bag until found.",
     Default = false,
     Callback = function(Value) Config.AutoRoll = Value end
+})
+
+Tabs.Items:AddSlider("RollSpeedSlider", {
+    Title = "Buy Speed",
+    Description = "0 = Spam Fast",
+    Default = 0.1,
+    Min = 0,
+    Max = 1,
+    Rounding = 2,
+    Callback = function(Value) Config.RollSpeed = Value end
 })
 
 -- [[ DUNGEON TAB ]]
@@ -256,7 +272,7 @@ Tabs.Misc:AddToggle("ReduceLagToggle", { Title = "Reduce Lag", Default = false, 
 -- Init
 Window:SelectTab(1)
 Fluent:Notify({
-    Title = "Liz Hub v1.7",
-    Content = "Auto Roll Added!",
+    Title = "Liz Hub v1.8",
+    Content = "Adjustable Speed Added!",
     Duration = 3
 })
