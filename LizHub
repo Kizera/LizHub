@@ -1,10 +1,11 @@
 local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
 
--- สร้างหน้าต่าง (Liz Hub v1.6)
+-- สร้างหน้าต่าง (Liz Hub v1.7)
 local Window = Fluent:CreateWindow({
-    Title = "Liz Hub v1.6",
+    Title = "Liz Hub v1.7",
+    SubTitle = "Auto Roll Uchiha",
     TabWidth = 160,
-    Size = UDim2.fromOffset(580, 400),
+    Size = UDim2.fromOffset(580, 420),
     Acrylic = true,
     Theme = "Dark",
     MinimizeKey = Enum.KeyCode.RightControl
@@ -20,9 +21,13 @@ local LocalPlayer = Players.LocalPlayer
 -- Remotes
 local Remote = ReplicatedStorage:WaitForChild("Modules"):WaitForChild("Signal"):WaitForChild("RemoteEvent")
 local DungeonRemotePath = ReplicatedStorage:WaitForChild("NEW37"):WaitForChild("DUNGEONS"):WaitForChild("DungeonEvent")
+local ItemRemoteEvents = ReplicatedStorage:WaitForChild("RemoteEvents") -- สำหรับ Buy/Clear
 
 -- Config
 local Config = {
+    -- Item
+    AutoRoll = false,
+    
     -- Dungeon
     AutoDungeon = false,
     SelectedDungeonRank = "B",
@@ -61,6 +66,7 @@ local TeleportData = {
 -- Tabs
 local Tabs = {
     Main = Window:AddTab({ Title = "Main", Icon = "home" }),
+    Items = Window:AddTab({ Title = "Items", Icon = "gift" }), -- แท็บใหม่สำหรับสุ่มของ
     Dungeon = Window:AddTab({ Title = "Dungeon", Icon = "castle" }),
     Teleport = Window:AddTab({ Title = "Teleport", Icon = "map" }),
     Misc = Window:AddTab({ Title = "Misc", Icon = "component" })
@@ -70,7 +76,47 @@ local Tabs = {
 -- SYSTEM: LOOPS
 -- =========================================================
 
--- Loop 1: Auto Dungeon
+-- Loop 1: Auto Roll (Uchiha Eyeball)
+task.spawn(function()
+    while true do
+        if Config.AutoRoll then
+            local backpack = LocalPlayer:FindFirstChild("Backpack")
+            if backpack then
+                -- 1. เช็คว่าเจอของดีหรือยัง?
+                local targetItem = backpack:FindFirstChild("Uchiha Eyeball")
+                
+                if targetItem then
+                    -- เจอแล้ว! หยุดทุกอย่าง
+                    Config.AutoRoll = false
+                    Fluent:Notify({
+                        Title = "CONGRATULATIONS!",
+                        Content = "Uchiha Eyeball Found! Stopping...",
+                        Duration = 10
+                    })
+                else
+                    -- ยังไม่เจอ: เช็คจำนวนของในกระเป๋า
+                    local itemCount = 0
+                    for _, v in pairs(backpack:GetChildren()) do
+                        if v:IsA("Tool") then itemCount = itemCount + 1 end
+                    end
+                    
+                    if itemCount >= 10 then
+                        -- 2. ของเต็ม (10 ชิ้น) -> เคลียร์กระเป๋า
+                        ItemRemoteEvents.ClearInventoryRemote:FireServer()
+                        task.wait(0.8) -- รอระบบลบของ
+                    else
+                        -- 3. ของยังไม่เต็ม -> ซื้อต่อ
+                        ItemRemoteEvents.BuyItemRemote:FireServer("Random Specialization")
+                        task.wait(0.2) -- ความเร็วการซื้อ
+                    end
+                end
+            end
+        end
+        task.wait(0.1)
+    end
+end)
+
+-- Loop 2: Auto Dungeon
 task.spawn(function()
     while true do
         if Config.AutoDungeon then
@@ -93,7 +139,7 @@ task.spawn(function()
     end
 end)
 
--- Loop 2: Auto Skill
+-- Loop 3: Auto Skill
 task.spawn(function()
     while true do
         if Config.AutoSkill then
@@ -107,7 +153,7 @@ task.spawn(function()
     end
 end)
 
--- Loop 3: Misc
+-- Loop 4: Misc
 task.spawn(function()
     while true do
         if Config.ReduceLag then
@@ -129,7 +175,7 @@ end)
 -- UI SETTINGS
 -- =========================================================
 
--- [[ MAIN TAB ]] (Skills Only)
+-- [[ MAIN TAB ]]
 local SectionSkill = Tabs.Main:AddSection("Skills")
 
 Tabs.Main:AddToggle("AutoSkillToggle", {
@@ -145,6 +191,14 @@ Tabs.Main:AddSlider("DelaySlider", {
     Max = 2,
     Rounding = 2,
     Callback = function(Value) Config.SkillDelay = Value end
+})
+
+-- [[ ITEMS TAB ]] (New!)
+Tabs.Items:AddToggle("AutoRollToggle", {
+    Title = "Auto Roll: Uchiha Eyeball",
+    Description = "Buys until found. Clears full bag.",
+    Default = false,
+    Callback = function(Value) Config.AutoRoll = Value end
 })
 
 -- [[ DUNGEON TAB ]]
@@ -202,7 +256,7 @@ Tabs.Misc:AddToggle("ReduceLagToggle", { Title = "Reduce Lag", Default = false, 
 -- Init
 Window:SelectTab(1)
 Fluent:Notify({
-    Title = "Liz Hub v1.6",
-    Content = "Cleaned Up (Skill Only)!",
+    Title = "Liz Hub v1.7",
+    Content = "Auto Roll Added!",
     Duration = 3
 })
